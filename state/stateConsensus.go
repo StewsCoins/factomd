@@ -746,6 +746,12 @@ func (s *State) FollowerExecuteMMR(m interfaces.IMsg) {
 		return
 	}
 
+	// Make sure we have not recorded this message in a block yet.  If we have, then totally ignore.
+	_, isnew := s.FReplay.Valid(constants.BLOCK_REPLAY, msg.GetRepeatHash().Fixed(), msg.GetTimestamp(), s.GetTimestamp())
+	if !isnew {
+		return
+	}
+
 	pl := s.ProcessLists.Get(ack.DBHeight)
 	_, okr := s.Replay.Valid(constants.INTERNAL_REPLAY, ack.GetRepeatHash().Fixed(), ack.GetTimestamp(), s.GetTimestamp())
 	_, okm := s.Replay.Valid(constants.INTERNAL_REPLAY, msg.GetRepeatHash().Fixed(), msg.GetTimestamp(), s.GetTimestamp())
