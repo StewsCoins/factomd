@@ -38,6 +38,9 @@ var _ = (*hash.Hash32)(nil)
 func (s *State) executeMsg(vm *VM, msg interfaces.IMsg) (ret bool) {
 	preExecuteMsgTime := time.Now()
 	_, ok := s.Replay.Valid(constants.INTERNAL_REPLAY, msg.GetRepeatHash().Fixed(), msg.GetTimestamp(), s.GetTimestamp())
+	if ok {
+		_, ok = s.FReplay.Valid(constants.BLOCK_REPLAY, msg.GetRepeatHash().Fixed(), msg.GetTimestamp(), s.FReplay.CurrentTime)
+	}
 	if !ok {
 		if s.SuperVerboseMessages {
 			fmt.Println("SVM exMsg (replay invalid):", msg.String(), msg.GetHash().String()[:10])

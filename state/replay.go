@@ -23,10 +23,11 @@ var _ = time.Now()
 var _ = fmt.Print
 
 type Replay struct {
-	Mutex    sync.Mutex
-	Buckets  [numBuckets]map[[32]byte]int
-	Basetime int // hours since 1970
-	Center   int // Hour of the current time.
+	Mutex       sync.Mutex
+	Buckets     [numBuckets]map[[32]byte]int
+	Basetime    int // hours since 1970
+	Center      int // Hour of the current time.
+	CurrentTime interfaces.Timestamp
 }
 
 var _ interfaces.BinaryMarshallable = (*Replay)(nil)
@@ -169,6 +170,9 @@ func Minutes(unix int64) int {
 // Returns false if the hash is too old, or is already a
 // member of the set.  Timestamp is in seconds.
 func (r *Replay) Valid(mask int, hash [32]byte, timestamp interfaces.Timestamp, systemtime interfaces.Timestamp) (index int, valid bool) {
+	if systemtime == nil {
+		return 0, true
+	}
 	now := Minutes(systemtime.GetTimeSeconds())
 	t := Minutes(timestamp.GetTimeSeconds())
 
@@ -191,6 +195,7 @@ func (r *Replay) Valid(mask int, hash [32]byte, timestamp interfaces.Timestamp, 
 	// Move the current time up to r.center if it is in the past.
 	if now < r.Center {
 		now = r.Center
+		r.CurrentTime = systemtime
 	}
 
 	if r.Center == 0 {
