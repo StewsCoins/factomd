@@ -1209,6 +1209,31 @@ func (list *DBStateList) SaveDBStateToDB(d *DBState) (progress bool) {
 		}
 	}
 
+	// The following Repeat protection is important even if the block is already in the database
+	// So this code is placed here.
+	{
+		// Set the Block Replay flag for all these transactions we are saving to the database.
+		for _, fct := range d.FactoidBlock.GetTransactions() {
+			list.State.FReplay.IsTSValid_(
+				constants.BLOCK_REPLAY,
+				fct.GetSigHash().Fixed(),
+				fct.GetTimestamp(),
+				d.DirectoryBlock.GetHeader().GetTimestamp())
+		}
+
+		// Set the Block Replay flag for all the commits we are saving to the database
+		for _, cmt := range d.EntryCreditBlock.GetEntries() {
+			_, isMin := cmt.(*entryCreditBlock.MinuteNumber)
+			if !isMin {
+				list.State.FReplay.IsTSValid_(
+					constants.BLOCK_REPLAY,
+					cmt.GetSigHash().Fixed(),
+					cmt.GetTimestamp(),
+					d.DirectoryBlock.GetHeader().GetTimestamp())
+			}
+		}
+	}
+
 	if d.Saved {
 		Havedblk, err := list.State.DB.DoesKeyExist(databaseOverlay.DIRECTORYBLOCK, d.DirectoryBlock.GetKeyMR().Bytes())
 		if err != nil || !Havedblk {
@@ -1334,15 +1359,6 @@ func (list *DBStateList) SaveDBStateToDB(d *DBState) (progress bool) {
 
 	if err := list.State.DB.ExecuteMultiBatch(); err != nil {
 		panic(err.Error())
-	}
-
-	// Set the Block Replay flag for all these transactions we are saving to the database.
-	for _, fct := range d.FactoidBlock.GetTransactions() {
-		list.State.FReplay.IsTSValid_(
-			constants.BLOCK_REPLAY,
-			fct.GetSigHash().Fixed(),
-			fct.GetTimestamp(),
-			d.DirectoryBlock.GetHeader().GetTimestamp())
 	}
 
 	// Not activated.  Set to true if you want extra checking of the data saved to the database.
