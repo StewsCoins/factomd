@@ -37,15 +37,17 @@ var _ = (*hash.Hash32)(nil)
 
 func (s *State) executeMsg(vm *VM, msg interfaces.IMsg) (ret bool) {
 	preExecuteMsgTime := time.Now()
-	_, ok := s.Replay.Valid(constants.INTERNAL_REPLAY, msg.GetRepeatHash().Fixed(), msg.GetTimestamp(), s.GetTimestamp())
-	if ok {
-		_, ok = s.FReplay.Valid(constants.BLOCK_REPLAY, msg.GetRepeatHash().Fixed(), msg.GetTimestamp(), s.FReplay.CurrentTime)
-	}
-	if !ok {
-		if s.SuperVerboseMessages {
-			fmt.Println("SVM exMsg (replay invalid):", msg.String(), msg.GetHash().String()[:10])
+	if msg.Type() != constants.ACK_MSG {
+		_, ok := s.Replay.Valid(constants.INTERNAL_REPLAY, msg.GetRepeatHash().Fixed(), msg.GetTimestamp(), s.GetTimestamp())
+		if ok {
+			_, ok = s.FReplay.Valid(constants.BLOCK_REPLAY, msg.GetRepeatHash().Fixed(), msg.GetTimestamp(), s.FReplay.CurrentTime)
 		}
-		return
+		if !ok {
+			if s.SuperVerboseMessages {
+				fmt.Println("SVM exMsg (replay invalid):", msg.String(), msg.GetHash().String()[:10])
+			}
+			return
+		}
 	}
 	s.SetString()
 	msg.ComputeVMIndex(s)
@@ -640,18 +642,9 @@ func (s *State) FollowerExecuteDBState(msg interfaces.IMsg) {
 		if i > 0 && // Don't test the coinbase TX
 			((dbheight > 0 && dbheight < 2000) || dbheight > 100000) && // Test the first 2000 blks, so we can unit test, then after
 			!valid { // 100K for the running system.  If a TX isn't valid, ignore.
+			cntFail()
 			return //Totally ignore the block if it has a double spend.
 		}
-	}
-
-	// Only set the flag if we know the whole block is valid.  We know it is because we checked them all in the loop
-	// above
-	for _, fct := range dbstatemsg.FactoidBlock.GetTransactions() {
-		s.FReplay.IsTSValid_(
-			constants.BLOCK_REPLAY,
-			fct.GetSigHash().Fixed(),
-			fct.GetTimestamp(),
-			dbstatemsg.DirectoryBlock.GetHeader().GetTimestamp())
 	}
 
 	if dbstatemsg.IsInDB == false {

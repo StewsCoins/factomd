@@ -165,7 +165,9 @@ func (m *DBStateMissing) FollowerExecute(state interfaces.IState) {
 	for dbs := start; dbs <= end && sent < 1024*1024; dbs++ {
 		sent += m.send(dbs, state)
 	}
-
+	if sent > 0 {
+		state.IncDBStateAnswerCnt()
+	}
 	return
 }
 
