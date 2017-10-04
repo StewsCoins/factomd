@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/FactomProject/factomd/common/adminBlock"
-	// "github.com/FactomProject/factomd/common/constants"
 	"github.com/FactomProject/factomd/common/constants"
 	"github.com/FactomProject/factomd/common/directoryBlock"
 	"github.com/FactomProject/factomd/common/entryBlock"
